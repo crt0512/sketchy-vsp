@@ -266,6 +266,7 @@ class App:
         self.others = 0
         self.cursor = 0
         self.msg, self.msg_until, self.msg_attr = "", 0, 0
+        self.msg_faint = ""
         curses.curs_set(0)
         scr.timeout(500)
         curses.start_color()
@@ -286,6 +287,7 @@ class App:
 
     def flash(self, msg, attr=None, secs=5):
         self.msg, self.msg_until = msg, time.time() + secs
+        self.msg_faint = ""
         self.msg_attr = self.C["warn"] if attr is None else attr
 
     def splash(self, text):
@@ -320,7 +322,7 @@ class App:
         s, C = self.scr, self.C
         s.erase()
         h, w = s.getmaxyx()
-        put(s, 0, 0, " sdmagic: Unlocks Hitachi VSP drive!!! ".ljust(w), curses.A_REVERSE)
+        put(s, 0, 0, " sdmagic: Unlocks da Hitachi VSP drives!!! ".ljust(w), curses.A_REVERSE)
         put(s, 1, 1, "Lock bit = mode page 0x38, byte 0x14, bit 0.  CUR = active now, "
                      "SAVED = after power cycle.", C["dim"])
         hdr = (f"{'':4} {'SG':<6}{'DEV':<6}{'MODEL':<14}{'SIZE':>10}  {'SECTOR':>6}  "
@@ -365,11 +367,13 @@ class App:
         put(s, h - 3, 1, summary, C["dim"])
         if time.time() < self.msg_until:
             put(s, h - 2, 1, self.msg, self.msg_attr)
+            if self.msg_faint:
+                put(s, h - 2, 1 + len(self.msg), self.msg_faint, self.C["dim"])
         else:
             nsel = sum(d.selected for d in self.disks)
             if nsel:
                 put(s, h - 2, 1, f"{nsel} selected", C["warn"])
-        keys = ("up/down = move duh, SPACE = select a disk, a = select all, ENTER = rape+test"
+        keys = ("up/down = move duh, SPACE = select a disk, a = select all, ENTER = rape+test, "
                 "t test only  r rescan  q quit")
         put(s, h - 1, 0, (" " + keys).ljust(w), curses.A_REVERSE)
         s.refresh()
@@ -410,9 +414,9 @@ class App:
             failed += not ok
             self.draw()
         attr = self.C["okay"] if not failed else self.C["fucking failed"]
-        self.flash(f"Done: {done_ok} drive(s) passed, {failed} failed."
-                   + ("  Cold power cycle and rescan to confirm the unlock persists."
-                      if done_ok and do_unlock else ""), attr, secs=15)
+        self.flash(f"Done: {done_ok} drive(s) passed, {failed} failed.", attr, secs=15)
+        if done_ok and do_unlock:
+            self.msg_faint = "  (powercycle drive to verify)"
 
     def handle(self, k):
         if k in (ord("q"), ord("Q")):
