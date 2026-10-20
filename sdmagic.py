@@ -322,7 +322,7 @@ class App:
         s, C = self.scr, self.C
         s.erase()
         h, w = s.getmaxyx()
-        put(s, 0, 0, " sdmagic: Unlocks da Hitachi VSP drives!!! ".ljust(w), curses.A_REVERSE)
+        put(s, 0, 0, " sdmagic: Unlocks da sketchy Hitachi VSP drives!!! made by crt mlol :^)".ljust(w), curses.A_REVERSE)
         put(s, 1, 1, "Lock bit = mode page 0x38, byte 0x14, bit 0.  CUR = active now, "
                      "SAVED = after power cycle.", C["dim"])
         hdr = (f"{'':4} {'SG':<6}{'DEV':<6}{'MODEL':<14}{'SIZE':>10}  {'SECTOR':>6}  "
