@@ -60,6 +60,7 @@ Notes:
 - Formats run inside the drive firmware and can take from hours up to a day in some cases
   - They survive quitting the script or a dead tmux session
   - Start `sgfmt.py` again and it picks up running formats, including ones you started by hand
+  - Progress bars expand to the terminal width, use Up/Down (or k/j) to scroll through drives in the progress view or drive list
 - Formats are logged to `/var/tmp/sgfmt-sgN.log`, and the script keeps its state in `/var/tmp/sgfmt-state.json`
 - Drives must be reformatted (512 or 4096 bytes, protection off) before `sdmagic.py` will unlock them
 - `smarties.py` keeps its raw `smartctl` dumps and a greppable `summary.txt` in `smarties-data/` next to the script (one folder per drive serial, oldest file = baseline)

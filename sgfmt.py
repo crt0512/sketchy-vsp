@@ -336,6 +336,8 @@ class App:
         self.disks = {}
         self.state = State()
         self.cursor = 0
+        self.select_offset = 0
+        self.progress_offset = 0
         self.screen = "select"
         self.msg, self.msg_until = "", 0
         self.last_poll = None
@@ -459,8 +461,14 @@ class App:
         rows = list(self.disks.values())
         if not rows:
             put(s, 5, 2, "No SCSI disks found.")
-        for i, d in enumerate(rows):
-            y = 4 + i
+        visible = max(1, h - 7)
+        self.select_offset = max(0, min(self.select_offset, self.cursor,
+                                       len(rows) - visible))
+        if self.cursor >= self.select_offset + visible:
+            self.select_offset = self.cursor - visible + 1
+        for i in range(self.select_offset, min(len(rows), self.select_offset + visible)):
+            d = rows[i]
+            y = 4 + i - self.select_offset
             if y >= h - 3:
                 break
             mark = "[x]" if d.selected else ("[ ]" if d.selectable else "   ")
@@ -512,11 +520,13 @@ class App:
         elif rows:
             put(s, 1, 1, "No formats running.", C["done"])
 
+        visible = max(1, (h - 4) // 4)
+        self.progress_offset = max(0, min(self.progress_offset, len(rows) - visible))
+        end = min(len(rows), self.progress_offset + visible)
         y = 3
-        bw = max(10, min(w - 12, 80))
-        for d in rows:
-            if y + 3 >= h - 1:
-                put(s, y, 1, f"… {len(rows)} drives, enlarge the window to see all", C["dim"])
+        bw = max(0, w - 10)
+        for d in rows[self.progress_offset:end]:
+            if y + 2 >= h - 2:
                 break
             put(s, y, 1, f"{d.sg:<5} /dev/{d.block or '?':<5} {d.vendor} {d.model}  "
                          f"{fmt_size(d.size)}", curses.A_BOLD)
@@ -546,7 +556,10 @@ class App:
             put(s, 3, 2, "Nothing is formatting. Press b to pick drives.")
         if time.time() < self.msg_until:
             put(s, h - 2, 1, self.msg, C["formatting"])
-        keys = "b drive list, r poll now, q quit (formats keep running inside the drives)"
+        elif len(rows) > visible:
+            put(s, h - 2, 1, f"Drives {self.progress_offset + 1}-{end} of {len(rows)}",
+                C["dim"])
+        keys = "↑/↓ scroll, b drive list, r poll now, q quit (formats keep running inside the drives)"
         put(s, h - 1, 0, (" " + keys).ljust(w), curses.A_REVERSE)
 
     def confirm(self, sel):
@@ -589,7 +602,15 @@ class App:
         if k == curses.KEY_RESIZE:
             return True
         if self.screen == "progress":
-            if k in (ord("b"), ord("B")):
+            if k in (curses.KEY_UP, ord("k")):
+                self.progress_offset = max(0, self.progress_offset - 1)
+            elif k in (curses.KEY_DOWN, ord("j")):
+                h, _ = self.scr.getmaxyx()
+                visible = max(1, (h - 4) // 4)
+                tracked = sum(d.status in TRACKED for d in rows)
+                self.progress_offset = max(0, min(self.progress_offset + 1,
+                                                  tracked - visible))
+            elif k in (ord("b"), ord("B")):
                 self.screen = "select"
             elif k in (ord("r"), ord("R")):
                 self.monitor.wake.set()
